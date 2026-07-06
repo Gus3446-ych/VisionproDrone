@@ -112,7 +112,7 @@ static void DecompressionOutputCallback(
 
         for (size_t y = 0; y < height; y++) {
             const uint8_t* src = source + (y * sourceStride);
-            uint8_t* dst = rgba.data() + ((height - 1 - y) * width * 4);
+            uint8_t* dst = rgba.data() + (y * width * 4);
 
             for (size_t x = 0; x < width; x++) {
                 // VideoToolbox gives BGRA. Unity TextureFormat.RGBA32 expects RGBA byte order here.
