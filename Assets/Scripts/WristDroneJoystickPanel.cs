@@ -67,7 +67,7 @@ public class WristDroneJoystickPanel : MonoBehaviour
     void OnDisable()
     {
         ReleaseDirectPressedControls();
-        SetStick(Vector2.zero);
+        ClearSticks();
     }
 
     public void SetStick(Vector2 value)
@@ -78,6 +78,33 @@ public class WristDroneJoystickPanel : MonoBehaviour
             s_RightStick = value;
 
         Debug.Log($"[WristJoystick] {(m_LeftWristJoystick ? "Left" : "Right")} stick input = {value}", this);
+
+        s_HasJoystickInput = s_LeftStick != Vector2.zero || s_RightStick != Vector2.zero;
+        if (!s_HasJoystickInput)
+            s_SendZeroOnce = true;
+    }
+
+    public void SetStick(WristDroneJoystickPanelButton sourceButton, Vector2 value)
+    {
+        bool targetLeftStick = m_LeftWristJoystick;
+        Transform buttonTransform = sourceButton != null ? sourceButton.transform : null;
+
+        if (IsUnderPanel(buttonTransform, "Panel1"))
+            targetLeftStick = true;
+        else if (IsUnderPanel(buttonTransform, "Panel2"))
+            targetLeftStick = false;
+
+        SetStick(targetLeftStick, value);
+    }
+
+    void SetStick(bool targetLeftStick, Vector2 value)
+    {
+        if (targetLeftStick)
+            s_LeftStick = value;
+        else
+            s_RightStick = value;
+
+        Debug.Log($"[WristJoystick] {(targetLeftStick ? "Left" : "Right")} stick input = {value}", this);
 
         s_HasJoystickInput = s_LeftStick != Vector2.zero || s_RightStick != Vector2.zero;
         if (!s_HasJoystickInput)
@@ -114,7 +141,17 @@ public class WristDroneJoystickPanel : MonoBehaviour
     public void Land()
     {
         Debug.Log("[WristJoystick] Land command invoked", this);
+        ClearSticks();
         Tello.land();
+    }
+
+    void ClearSticks()
+    {
+        s_LeftStick = Vector2.zero;
+        s_RightStick = Vector2.zero;
+        s_HasJoystickInput = false;
+        s_SendZeroOnce = true;
+        Tello.controllerState.setAxis(0f, 0f, 0f, 0f);
     }
 
     void EnsureTakeOffButtonBetweenPanels()
@@ -292,6 +329,12 @@ public class WristDroneJoystickPanel : MonoBehaviour
             if (joystickButton == null)
                 continue;
 
+            if (joystickButton.GetComponent<Button>() != null)
+            {
+                joystickButton.enabled = false;
+                continue;
+            }
+
             joystickButton.Configure(this);
             m_JoystickButtons.Add(joystickButton);
             EnsureClickableSize(joystickButton.GetComponent<RectTransform>(), joystickButton.name);
@@ -304,6 +347,9 @@ public class WristDroneJoystickPanel : MonoBehaviour
                 continue;
 
             EnsureClickableSize(commandButton.GetComponent<RectTransform>(), commandButton.name);
+            if (commandButton.GetComponent<PressedButtonStatusReporter>() == null)
+                commandButton.gameObject.AddComponent<PressedButtonStatusReporter>();
+
             m_CommandButtons.Add(new ButtonTouchTarget(commandButton));
             Debug.Log($"[WristJoystick] Command button ready: {commandButton.name}", commandButton);
         }
@@ -359,6 +405,7 @@ public class WristDroneJoystickPanel : MonoBehaviour
                     ReleaseCommandButton();
                     m_DirectPressedCommandButton = pressCommandButton;
                     SetCommandButtonHover(m_DirectPressedCommandButton, true, true);
+                    DroneInputStatus.SetButtonPressed(m_DirectPressedCommandButton.Button.name, true);
                     m_DirectPressedCommandButton.Button.onClick.Invoke();
                     Debug.Log($"[WristJoystick] Direct hand command invoked: {m_DirectPressedCommandButton.Button.name}", m_DirectPressedCommandButton.Button);
                 }
@@ -544,6 +591,7 @@ public class WristDroneJoystickPanel : MonoBehaviour
             return;
 
         SetCommandButtonHover(m_DirectPressedCommandButton, false, false);
+        DroneInputStatus.SetButtonPressed(m_DirectPressedCommandButton.Button.name, false);
         m_DirectPressedCommandButton = default;
     }
 
@@ -592,6 +640,19 @@ public class WristDroneJoystickPanel : MonoBehaviour
             if (interactionManager != null && interactionManager.gameObject.scene.IsValid())
                 interactionManager.gameObject.SetActive(true);
         }
+    }
+
+    static bool IsUnderPanel(Transform transform, string panelName)
+    {
+        while (transform != null)
+        {
+            if (transform.name == panelName)
+                return true;
+
+            transform = transform.parent;
+        }
+
+        return false;
     }
 
     readonly struct ButtonTouchTarget

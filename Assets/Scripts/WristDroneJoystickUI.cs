@@ -202,7 +202,7 @@ public class WristDroneJoystickUI : MonoBehaviour
 
         if (leftWristJoystick)
         {
-            CreateCommandButton(rect, "TAKE OFF", new Vector2(-138f, -128f), new Vector2(128f, 46f), Tello.takeOff);
+            CreateCommandButton(rect, "TAKE OFF", new Vector2(-138f, -128f), new Vector2(128f, 46f), TakeOff);
             CreateLabel(rect, "Fly Up / Down", new Vector2(-80f, 132f), 24);
             CreateLabel(rect, "Turn Left / Right", new Vector2(100f, 0f), 18);
             CreateButton(rect, "UP", new Vector2(0f, 76f), new Vector2(80f, 86f), leftWristJoystick, new Vector2(0f, 1f));
@@ -213,7 +213,7 @@ public class WristDroneJoystickUI : MonoBehaviour
         }
         else
         {
-            CreateCommandButton(rect, "LAND", new Vector2(138f, -128f), new Vector2(128f, 46f), Tello.land);
+            CreateCommandButton(rect, "LAND", new Vector2(138f, -128f), new Vector2(128f, 46f), Land);
             CreateLabel(rect, "Fly Forward / Backward", new Vector2(0f, 132f), 24);
             CreateLabel(rect, "Fly Left / Right", new Vector2(-112f, 0f), 18);
             CreateButton(rect, "FWD", new Vector2(0f, 76f), new Vector2(80f, 86f), leftWristJoystick, new Vector2(0f, 1f));
@@ -224,6 +224,21 @@ public class WristDroneJoystickUI : MonoBehaviour
         }
 
         return rect;
+    }
+
+    void TakeOff()
+    {
+        Tello.takeOff();
+    }
+
+    void Land()
+    {
+        m_LeftStick = Vector2.zero;
+        m_RightStick = Vector2.zero;
+        m_HasJoystickInput = false;
+        m_SendZeroOnce = true;
+        Tello.controllerState.setAxis(0f, 0f, 0f, 0f);
+        Tello.land();
     }
 
     void CreateCircle(RectTransform parent, string name, Vector2 position, Vector2 size, Color color)
@@ -264,7 +279,7 @@ public class WristDroneJoystickUI : MonoBehaviour
 
     void CreateCommandButton(RectTransform parent, string text, Vector2 position, Vector2 size, UnityEngine.Events.UnityAction action)
     {
-        GameObject go = new GameObject(text, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Button));
+        GameObject go = new GameObject(text, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Button), typeof(PressedButtonStatusReporter));
         go.transform.SetParent(parent, false);
 
         var rect = go.GetComponent<RectTransform>();
@@ -367,7 +382,11 @@ public class WristJoystickButton : MonoBehaviour, IPointerDownHandler, IPointerU
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (m_IsPressed)
+            return;
+
         m_IsPressed = true;
+        DroneInputStatus.SetButtonPressed(name, true);
         m_Owner.SetStick(m_LeftWristJoystick, m_Axis);
     }
 
@@ -392,6 +411,7 @@ public class WristJoystickButton : MonoBehaviour, IPointerDownHandler, IPointerU
             return;
 
         m_IsPressed = false;
+        DroneInputStatus.SetButtonPressed(name, false);
         m_Owner.SetStick(m_LeftWristJoystick, Vector2.zero);
     }
 }

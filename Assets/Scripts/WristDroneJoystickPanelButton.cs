@@ -115,7 +115,9 @@ public class WristDroneJoystickPanelButton : MonoBehaviour, IPointerDownHandler,
             m_WasPressed = pressed;
 
             if (m_Owner != null)
-                m_Owner.SetStick(pressed ? m_Axis : Vector2.zero);
+                m_Owner.SetStick(this, pressed ? m_Axis : Vector2.zero);
+
+            DroneInputStatus.SetButtonPressed(name, pressed);
 
             if (!pressed)
                 Debug.Log($"[WristJoystick] Button released: {name}", this);

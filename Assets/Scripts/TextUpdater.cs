@@ -22,15 +22,16 @@ public class TextUpdater : MonoBehaviour
         var state = Tello.state;
         if (state == null)
         {
-            textComponent.text = "BAT --%  WIFI --%  SPD --cm/s  ALT --cm";
+            textComponent.text = $"BAT --%  WIFI --%  SPD --cm/s  ALT --cm  BTN {DroneInputStatus.CurrentPressedButtons}";
             return;
         }
 
         textComponent.text = string.Format(
-            "BAT {0}%  WIFI {1}%  SPD {2}cm/s  ALT {3}cm",
+            "BAT {0}%  WIFI {1}%  SPD {2}cm/s  ALT {3}cm  BTN {4}",
             state.batteryPercentage,
             state.wifiStrength,
             state.flySpeed,
-            state.height);
+            state.height,
+            DroneInputStatus.CurrentPressedButtons);
     }
 }
